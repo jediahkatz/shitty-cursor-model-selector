@@ -7,7 +7,7 @@ We heard you loud and clear that it was getting confusing to pick between so man
 
 _Built with [Cursor](https://cursor.com/agents)._
 
-https://github.com/jediahkatz/shitty-cursor-model-selector/raw/main/demo.mov
+https://github.com/jediahkatz/shitty-cursor-model-selector/raw/main/demo.mp4
 
 ## Features
 
