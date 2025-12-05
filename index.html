@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Selector (Improved UX Edition)</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0a0a0f;
+            --bg-panel: #14141f;
+            --text-primary: #f0f0f0;
+            --text-secondary: #888;
+            --accent-gold: #ffd700;
+            --accent-red: #cc3333;
+            --accent-green: #44aa66;
+            
+            /* Timing variables - ADJUST THESE FOR VIDEO PACING */
+            --slot-spin-duration: 2500ms;
+            --dice-roll-duration: 2000ms;
+            --golf-swing-speed: 15ms;
+            --countdown-duration: 800ms;
+        }
+
+        body {
+            font-family: 'DM Sans', system-ui, sans-serif;
+            background: #121212;
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 900px;
+            min-height: 700px;
+            position: relative;
+        }
+
+        .stage {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 700px;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .stage.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        h1 {
+            font-family: 'DM Sans', system-ui, sans-serif;
+            font-size: 3.2rem;
+            font-weight: 700;
+            margin-bottom: 50px;
+            text-align: center;
+            letter-spacing: -0.02em;
+            color: #fff;
+        }
+
+        h2 {
+            font-family: 'DM Sans', system-ui, sans-serif;
+            font-size: 2.4rem;
+            font-weight: 600;
+            margin-bottom: 40px;
+            text-align: center;
+            color: #f0f0f0;
+        }
+
+        /* ============================================
+           STAGE 1: SLOT MACHINE
+           ============================================ */
+        .slot-machine {
+            display: flex;
+            align-items: stretch;
+            gap: 0;
+            filter: drop-shadow(0 25px 40px rgba(0,0,0,0.5));
+        }
+
+        .slot-cabinet {
+            background: linear-gradient(180deg, 
+                #1a1a1a 0%, 
+                #0d0d0d 100%
+            );
+            border-radius: 25px;
+            padding: 0;
+            position: relative;
+            overflow: visible;
+        }
+
+        /* Gold arc frame at top */
+        .slot-arc {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 380px;
+            height: 80px;
+            border: 12px solid;
+            border-color: #ffd700;
+            border-bottom: none;
+            border-radius: 200px 200px 0 0;
+            background: linear-gradient(180deg, 
+                #ffd700 0%,
+                #daa520 50%,
+                #b8860b 100%
+            );
+            box-shadow: 
+                inset 0 5px 15px rgba(255,255,255,0.4),
+                0 -5px 20px rgba(255,215,0,0.3);
+        }
+
+        .slot-arc::before {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            right: 8px;
+            bottom: 0;
+            border: 8px solid #0d0d0d;
+            border-bottom: none;
+            border-radius: 180px 180px 0 0;
+        }
+
+        /* Jackpot label */
+        .slot-jackpot {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(180deg, #1a1a2a 0%, #0d0d15 100%);
+            padding: 8px 30px;
+            border-radius: 20px;
+            border: 3px solid #ffd700;
+            z-index: 10;
+        }
+
+        .slot-jackpot-text {
+            font-family: 'DM Sans', system-ui, sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #ffd700;
+            letter-spacing: 0.2em;
+            text-shadow: 0 0 10px rgba(255,215,0,0.5);
+        }
+
+        /* Main slot body with gold border */
+        .slot-body {
+            background: linear-gradient(180deg, 
+                #ffd700 0%,
+                #daa520 20%,
+                #b8860b 50%,
+                #8b6914 80%,
+                #5c4a0f 100%
+            );
+            border-radius: 25px;
+            padding: 15px;
+            margin-top: 60px;
+        }
+
+        .slot-inner {
+            background: linear-gradient(180deg, #1a1a2a 0%, #0d0d15 100%);
+            border-radius: 15px;
+            padding: 25px 20px 30px 20px;
+        }
+
+        .slot-display {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .slot-window {
+            width: 110px;
+            height: 120px;
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            border: 4px solid #333;
+            box-shadow: 
+                inset 0 0 20px rgba(0,0,0,0.3),
+                0 4px 8px rgba(0,0,0,0.5);
+        }
+
+        /* Subtle inner shadow on windows */
+        .slot-window::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            box-shadow: 
+                inset 0 8px 15px -8px rgba(0,0,0,0.5),
+                inset 0 -8px 15px -8px rgba(0,0,0,0.5);
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .slot-reel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            transition: transform 0.1s linear;
+        }
+
+        .slot-item {
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'DM Sans', system-ui, sans-serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #333;
+            background: #fff;
+        }
+
+        .slot-item.gpt { 
+            color: #fff;
+            background: linear-gradient(135deg, #10a37f 0%, #0d8a6a 100%);
+        }
+        .slot-item.claude { 
+            color: #fff;
+            background: linear-gradient(135deg, #d4a574 0%, #b8895c 100%);
+        }
+        .slot-item.grok { 
+            color: #fff;
+            background: linear-gradient(135deg, #1da1f2 0%, #0d8bd9 100%);
+        }
+        .slot-item.gemini { 
+            color: #fff;
+            background: linear-gradient(135deg, #8e44ad 0%, #7d3c98 100%);
+        }
+        .slot-item.llama { 
+            color: #fff;
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+        .slot-item.mistral { 
+            color: #fff;
+            background: linear-gradient(135deg, #f39c12 0%, #d68910 100%);
+        }
+
+        /* Tap to play button */
+        .slot-play-btn {
+            display: block;
+            margin: 20px auto 0;
+            padding: 12px 40px;
+            background: linear-gradient(180deg, 
+                #ffd700 0%,
+                #daa520 50%,
+                #b8860b 100%
+            );
+            border: none;
+            border-radius: 25px;
+            font-family: 'DM Sans', system-ui, sans-serif;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            cursor: pointer;
+            box-shadow: 
+                0 4px 0 #8b6914,
+                0 6px 15px rgba(0,0,0,0.4);
+            transition: all 0.1s ease;
+            text-shadow: 0 1px 0 rgba(255,255,255,0.3);
+        }
+
+        .slot-play-btn:hover {
+            transform: translateY(2px);
+            box-shadow: 
+                0 2px 0 #8b6914,
+                0 4px 10px rgba(0,0,0,0.4);
+        }
+
+        .slot-play-btn:active {
+            transform: translateY(4px);
+            box-shadow: 
+                0 0 0 #8b6914,
+                0 2px 5px rgba(0,0,0,0.4);
+        }
+
+        .lever-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px 25px;
+            background: linear-gradient(180deg, 
+                #2a2a2a 0%, 
+                #1a1a1a 50%,
+                #0d0d0d 100%
+            );
+            border-radius: 0 25px 25px 0;
+            margin-left: -4px;
+            border: 4px solid;
+            border-color: #ffd700 #b8860b #8b6914 transparent;
+            border-left: none;
+            box-shadow: 
+                inset -2px 0 4px rgba(0,0,0,0.2),
+                inset 0 2px 0 rgba(255,255,255,0.05);
+            margin-top: 60px;
+        }
+
+        .lever {
+            width: 14px;
+            height: 180px;
+            background: linear-gradient(90deg, 
+                #555 0%, 
+                #888 20%,
+                #aaa 40%,
+                #ccc 50%,
+                #aaa 60%,
+                #888 80%,
+                #555 100%
+            );
+            border-radius: 7px;
+            position: relative;
+            cursor: pointer;
+            box-shadow: 
+                2px 3px 6px rgba(0,0,0,0.6),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+        }
+
+        .lever-ball {
+            width: 50px;
+            height: 50px;
+            background: 
+                radial-gradient(circle at 30% 30%, #fff 0%, transparent 25%),
+                radial-gradient(circle at 40% 40%, #ff3333 0%, #cc0000 40%, #990000 70%, #660000 100%);
+            border-radius: 50%;
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 
+                inset -4px -4px 10px rgba(0,0,0,0.5),
+                inset 2px 2px 6px rgba(255,255,255,0.3),
+                3px 5px 10px rgba(0,0,0,0.6);
+            transition: top 0.15s ease;
+            border: 3px solid #440000;
+        }
+
+        .lever.pulled .lever-ball {
+            top: 130px;
+        }
+
+        .lever-base {
+            width: 45px;
+            height: 18px;
+            background: linear-gradient(180deg, 
+                #666 0%, 
+                #444 50%,
+                #333 100%
+            );
+            border-radius: 5px;
+            margin-top: 10px;
+            box-shadow: 
+                inset 0 1px 0 rgba(255,255,255,0.2),
+                0 3px 6px rgba(0,0,0,0.5);
+            border: 1px solid #222;
+        }
+
+        /* ============================================
+           STAGE 2: EARTHQUAKE SELECTOR
+           ============================================ */
+        .earthquake-table {
+            width: 700px;
+            border-collapse: collapse;
+            background: #fff;
+            color: #000;
+            font-family: 'DM Sans', system-ui, sans-serif;
+            font-size: 1rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        .earthquake-table th {
+            background: #f8f9fa;
+            padding: 16px 20px;
+            text-align: left;
+            font-weight: 700;
+            border-bottom: 2px solid #a2a9b1;
+            font-size: 1.1rem;
+        }
+
+        .earthquake-table td {
+            padding: 14px 20px;
+            border-bottom: 1px solid #c8ccd1;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .earthquake-table tr {
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .earthquake-table tbody tr:hover {
+            background: #e6f3ff;
+        }
+
+        .earthquake-table a {
+            color: #0645ad;
+            text-decoration: none;
+        }
+
+        .earthquake-table a:hover {
+            text-decoration: underline;
+        }
+
+        .earthquake-table .selected {
+            background: #cce5ff !important;
+        }
+
+        .earthquake-instruction {
+            font-family: 'DM Sans', system-ui, sans-serif;
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 25px;
+        }
+
+        .selected-version {
+            font-family: 'DM Sans', system-ui, sans-serif;
+            font-size: 3rem;
+            font-weight: 700;
+            color: #fff;
+            margin-top: 30px;
+            min-height: 60px;
+        }
+
+        /* ============================================
+           STAGE 3: DICE ROLL
+           ============================================ */
+        #dice-container {
+            width: 400px;
+            height: 400px;
+            cursor: pointer;
+        }
+
+        .dice-instruction {
+            font-size: 1.6rem;
+            color: var(--text-secondary);
+            margin-top: 30px;
+        }
+
+        /* ============================================
+           STAGE 4: WII GOLF
+           ============================================ */
+        .golf-stage {
+            width: 100%;
+            height: 700px;
+            position: relative;
+            background: url('wii-golf.png') center center;
+            background-size: cover;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .golf-overlay {
+            position: absolute;
+            bottom: 40px;
+            right: 110px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .golf-label {
+            font-family: Arial, sans-serif;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            margin-bottom: 10px;
+        }
+
+        .power-bar-container {
+            width: 60px;
+            height: 350px;
+            background: linear-gradient(180deg, 
+                #ff0000 0%, 
+                #ff0000 15%,
+                #ff6600 15%, 
+                #ff6600 35%,
+                #ffcc00 35%, 
+                #ffcc00 55%,
+                #00cc00 55%, 
+                #00cc00 100%
+            );
+            border-radius: 8px;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5), inset 0 0 10px rgba(0,0,0,0.3);
+            border: 3px solid #fff;
+        }
+
+        .power-bar-labels {
+            position: absolute;
+            left: 70px;
+            top: 0;
+            height: 100%;
+        }
+
+        .power-label {
+            font-family: Arial, sans-serif;
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            position: absolute;
+            left: 0;
+            white-space: nowrap;
+        }
+
+        /* Position labels at center of each color zone */
+        .power-label.label-xhigh { top: 7%; }    /* Red: 0-15% */
+        .power-label.label-high { top: 25%; }    /* Orange: 15-35% */
+        .power-label.label-medium { top: 45%; }  /* Yellow: 35-55% */
+        .power-label.label-low { top: 75%; }     /* Green: 55-100% */
+
+        .power-indicator {
+            position: absolute;
+            left: -10px;
+            width: 80px;
+            height: 8px;
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            transition: top 0.015s linear;
+        }
+
+        .power-indicator::before {
+            content: '';
+            position: absolute;
+            left: -15px;
+            top: -6px;
+            width: 0;
+            height: 0;
+            border-top: 10px solid transparent;
+            border-bottom: 10px solid transparent;
+            border-right: 15px solid #fff;
+        }
+
+        .golf-instruction {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Arial, sans-serif;
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.9);
+            white-space: nowrap;
+        }
+
+        /* ============================================
+           STAGE 5: EASY BUTTON (Too Slow)
+           ============================================ */
+        .easy-button-stage {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .click-for-fast {
+            font-family: 'DM Sans', system-ui, sans-serif;
+            font-size: 2.4rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 40px;
+        }
+
+        .easy-button {
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #ff4444, #cc0000, #880000);
+            border: none;
+            cursor: pointer;
+            position: relative;
+            box-shadow: 
+                0 15px 0 #660000,
+                0 20px 30px rgba(0,0,0,0.5),
+                inset 0 -10px 30px rgba(0,0,0,0.3),
+                inset 0 10px 30px rgba(255,255,255,0.2);
+            transition: all 0.1s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .easy-button:hover {
+            transform: translateY(2px);
+            box-shadow: 
+                0 13px 0 #660000,
+                0 18px 25px rgba(0,0,0,0.5),
+                inset 0 -10px 30px rgba(0,0,0,0.3),
+                inset 0 10px 30px rgba(255,255,255,0.2);
+        }
+
+        .easy-button:active {
+            transform: translateY(10px);
+            box-shadow: 
+                0 5px 0 #660000,
+                0 10px 20px rgba(0,0,0,0.5),
+                inset 0 -10px 30px rgba(0,0,0,0.3),
+                inset 0 10px 30px rgba(255,255,255,0.2);
+        }
+
+        .easy-button-text {
+            font-family: 'DM Sans', system-ui, sans-serif;
+            font-size: 4rem;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .countdown-bar-container {
+            width: 350px;
+            height: 30px;
+            background: #333;
+            border-radius: 15px;
+            margin-top: 50px;
+            overflow: hidden;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        .countdown-bar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #5a5, #484);
+            border-radius: 15px;
+            transition: width linear;
+        }
+
+        .too-slow-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.85);
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .too-slow-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .too-slow-image {
+            max-width: 80%;
+            max-height: 80%;
+            animation: tooSlowPulse 0.5s ease infinite;
+        }
+
+        @keyframes tooSlowPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        /* Result screen */
+        .result-stage {
+            text-align: center;
+        }
+
+        .result-model {
+            font-family: 'DM Sans', system-ui, sans-serif;
+            font-size: 2.6rem;
+            font-weight: 700;
+            white-space: nowrap;
+            background: linear-gradient(135deg, var(--accent-gold) 0%, #fff 50%, var(--accent-gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-top: 20px;
+        }
+
+        .restart-btn {
+            margin-top: 50px;
+            padding: 20px 50px;
+            font-size: 1.4rem;
+            font-family: 'DM Sans', system-ui, sans-serif;
+            background: linear-gradient(135deg, #333 0%, #1a1a1a 100%);
+            color: #fff;
+            border: 2px solid #555;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .restart-btn:hover {
+            background: linear-gradient(135deg, #444 0%, #222 100%);
+            border-color: #777;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Stage 1: Slot Machine -->
+        <div class="stage active" id="stage-slot">
+            <h1>Select Model Provider</h1>
+            <div class="slot-machine">
+                <div class="slot-cabinet">
+                    <div class="slot-arc"></div>
+                    <div class="slot-jackpot">
+                        <span class="slot-jackpot-text">JACKPOT</span>
+                    </div>
+                    <div class="slot-body">
+                        <div class="slot-inner">
+                            <div class="slot-display">
+                                <div class="slot-window">
+                                    <div class="slot-reel" id="slot-reel-1">
+                                        <!-- Items will be generated by JS -->
+                                    </div>
+                                </div>
+                                <div class="slot-window">
+                                    <div class="slot-reel" id="slot-reel-2">
+                                        <!-- Items will be generated by JS -->
+                                    </div>
+                                </div>
+                                <div class="slot-window">
+                                    <div class="slot-reel" id="slot-reel-3">
+                                        <!-- Items will be generated by JS -->
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="slot-play-btn" id="slot-play-btn">Get 3 to Select</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="lever-container">
+                    <div class="lever" id="lever">
+                        <div class="lever-ball"></div>
+                    </div>
+                    <div class="lever-base"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stage 2: Earthquake Selector -->
+        <div class="stage" id="stage-earthquake">
+            <h2>Select Model Version</h2>
+            <p class="earthquake-instruction">Pick the earthquake with magnitude equal to desired version number</p>
+            <table class="earthquake-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Location</th>
+                        <th>Depth</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr data-version="5.0" onclick="selectEarthquake(this, '5.0')">
+                        <td>2010-06-23</td>
+                        <td><a href="#">Val-des-Bois, Quebec</a></td>
+                        <td>16 km</td>
+                    </tr>
+                    <tr data-version="5.1" onclick="selectEarthquake(this, '5.1')">
+                        <td>2011-05-11</td>
+                        <td><a href="#">Lorca, Spain</a></td>
+                        <td>1 km</td>
+                    </tr>
+                    <tr data-version="5.2" onclick="selectEarthquake(this, '5.2')">
+                        <td>2005-11-26</td>
+                        <td><a href="#">Ruichang, Jiangxi, China</a></td>
+                        <td>10 km</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="selected-version" id="selected-version"></div>
+        </div>
+
+        <!-- Stage 3: Dice Roll -->
+        <div class="stage" id="stage-dice">
+            <h2>Select Model Variant</h2>
+            <div id="dice-container"></div>
+            <p class="dice-instruction">Click to roll</p>
+        </div>
+
+        <!-- Stage 4: Wii Golf -->
+        <div class="stage" id="stage-golf">
+            <div class="golf-stage" id="golf-area">
+                <div class="golf-instruction">Swing to set reasoning effort</div>
+                <div class="golf-overlay">
+                    <div class="golf-label">POWER</div>
+                    <div class="power-bar-container">
+                        <div class="power-indicator" id="power-indicator"></div>
+                        <div class="power-bar-labels">
+                            <span class="power-label label-xhigh">xhigh</span>
+                            <span class="power-label label-high">high</span>
+                            <span class="power-label label-medium">medium</span>
+                            <span class="power-label label-low">low</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stage 5: Easy Button -->
+        <div class="stage" id="stage-easy">
+            <div class="easy-button-stage">
+                <div class="click-for-fast">Click for Fast</div>
+                <button class="easy-button" id="easy-button">
+                    <span class="easy-button-text">Fast</span>
+                </button>
+                <div class="countdown-bar-container">
+                    <div class="countdown-bar" id="countdown-bar"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Too Slow Overlay (appears on top) -->
+        <div class="too-slow-overlay" id="too-slow-overlay">
+            <img class="too-slow-image" src="tooslow.png" alt="Too Slow">
+        </div>
+
+        <!-- Stage 6: Result -->
+        <div class="stage" id="stage-result">
+            <div class="result-stage">
+                <h2>Your Model Selection</h2>
+                <div class="result-model" id="result-model">GPT-5.1 Codex Max Extra High</div>
+                <button class="restart-btn" onclick="restart()">Start Over</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // CONFIGURATION - Adjust these for video pacing
+        // ============================================
+        const CONFIG = {
+            slotSpinDuration: 2500,      // How long the slot spins (ms)
+            slotItemHeight: 200,         // Height of each slot item (px)
+            diceRollDuration: 2000,      // How long dice rolls (ms)
+            golfSwingSpeed: 15,          // Power bar movement speed (ms per step)
+            countdownDuration: 800,      // Easy button countdown (ms)
+            
+            // Target outcomes
+            targetProvider: 'GPT',
+            targetVersion: '5.1',
+            targetVariant: 'Codex Max',
+            targetEffort: 'xhigh'
+        };
+
+        // ============================================
+        // STATE
+        // ============================================
+        let currentStage = 0;
+        let selections = {
+            provider: '',
+            version: '',
+            variant: '',
+            effort: '',
+            speed: ''
+        };
+
+        // ============================================
+        // STAGE 1: SLOT MACHINE (3 Reels)
+        // ============================================
+        const providers = ['Claude', 'Grok', 'Gemini', 'GPT', 'Llama', 'Mistral'];
+        const providerColors = {
+            'GPT': 'gpt',
+            'Claude': 'claude',
+            'Grok': 'grok',
+            'Gemini': 'gemini',
+            'Llama': 'llama',
+            'Mistral': 'mistral'
+        };
+
+        const SLOT_ITEM_HEIGHT = 120; // Height of each slot item for new design
+
+        function initSlotMachine() {
+            // Initialize all 3 reels
+            for (let r = 1; r <= 3; r++) {
+                const reel = document.getElementById(`slot-reel-${r}`);
+                let reelHTML = '';
+                for (let i = 0; i < 30; i++) {
+                    providers.forEach(provider => {
+                        reelHTML += `<div class="slot-item ${providerColors[provider]}">${provider}</div>`;
+                    });
+                }
+                reel.innerHTML = reelHTML;
+                
+                // Start each reel at a different position
+                const startIndex = r; // Different starting position for each reel
+                reel.style.transform = `translateY(-${startIndex * SLOT_ITEM_HEIGHT}px)`;
+            }
+        }
+
+        let slotSpinning = false;
+        
+        // Both lever and button trigger the spin
+        document.getElementById('lever').addEventListener('click', triggerSpin);
+        document.getElementById('slot-play-btn').addEventListener('click', triggerSpin);
+
+        function triggerSpin() {
+            if (slotSpinning) return;
+            
+            const lever = document.getElementById('lever');
+            lever.classList.add('pulled');
+            
+            setTimeout(() => {
+                lever.classList.remove('pulled');
+                spinAllReels();
+            }, 150);
+        }
+
+        function spinAllReels() {
+            slotSpinning = true;
+            
+            // Find the target index for GPT
+            const targetIndex = providers.indexOf(CONFIG.targetProvider);
+            
+            // Spin each reel with staggered timing
+            const reelDelays = [0, 300, 600]; // Stagger the stops
+            const reelDurations = [
+                CONFIG.slotSpinDuration,
+                CONFIG.slotSpinDuration + 300,
+                CONFIG.slotSpinDuration + 600
+            ];
+            
+            let completedReels = 0;
+            
+            for (let r = 1; r <= 3; r++) {
+                const reel = document.getElementById(`slot-reel-${r}`);
+                const startIndex = r;
+                
+                // Calculate final position to land on GPT
+                const spinsBeforeStop = 12 + r * 2; // Different number of spins for variety
+                const finalPosition = (spinsBeforeStop * providers.length + targetIndex) * SLOT_ITEM_HEIGHT;
+                
+                const startPosition = startIndex * SLOT_ITEM_HEIGHT;
+                const distance = finalPosition - startPosition;
+                
+                animateReel(reel, startPosition, distance, reelDurations[r - 1], () => {
+                    completedReels++;
+                    if (completedReels === 3) {
+                        // All reels done - all showing GPT!
+                        slotSpinning = false;
+                        selections.provider = CONFIG.targetProvider;
+                        setTimeout(() => advanceStage(), 700);
+                    }
+                });
+            }
+        }
+
+        function animateReel(reel, startPosition, distance, duration, onComplete) {
+            let startTime = null;
+            
+            function easeOutCubic(t) {
+                return 1 - Math.pow(1 - t, 3);
+            }
+            
+            function animate(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const elapsed = timestamp - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = easeOutCubic(progress);
+                
+                const currentPosition = startPosition + distance * eased;
+                reel.style.transform = `translateY(-${currentPosition}px)`;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    onComplete();
+                }
+            }
+            
+            requestAnimationFrame(animate);
+        }
+
+        // ============================================
+        // STAGE 2: EARTHQUAKE SELECTOR
+        // ============================================
+        function selectEarthquake(row, version) {
+            document.querySelectorAll('.earthquake-table tbody tr').forEach(r => r.classList.remove('selected'));
+            row.classList.add('selected');
+            selections.version = version;
+            
+            // Show selected version below the table
+            const versionDisplay = document.getElementById('selected-version');
+            versionDisplay.textContent = version;
+            
+            setTimeout(() => advanceStage(), 1000);
+        }
+
+        // ============================================
+        // STAGE 3: THREE.JS DICE
+        // ============================================
+        let scene, camera, renderer, dice;
+        let diceRolling = false;
+        const variants = ['Pro', 'Mini', 'Nano', 'Codex', 'Codex Max', 'Base'];
+
+        function initDice() {
+            const container = document.getElementById('dice-container');
+            
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+            camera.position.z = 5;
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(400, 400);
+            renderer.setClearColor(0x000000, 0);
+            container.appendChild(renderer.domElement);
+            
+            // Create dice geometry
+            const geometry = new THREE.BoxGeometry(2, 2, 2);
+            
+            // Create materials with text for each face
+            const materials = variants.map((variant, i) => {
+                const canvas = document.createElement('canvas');
+                canvas.width = 256;
+                canvas.height = 256;
+                const ctx = canvas.getContext('2d');
+                
+                // White background
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, 256, 256);
+                
+                // Subtle border
+                ctx.strokeStyle = '#cccccc';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(4, 4, 248, 248);
+                
+                // Black text
+                ctx.fillStyle = '#1a1a1a';
+                ctx.font = 'bold 36px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                // Handle multi-line for longer text
+                if (variant.includes(' ')) {
+                    const parts = variant.split(' ');
+                    ctx.fillText(parts[0], 128, 110);
+                    ctx.fillText(parts[1], 128, 150);
+                } else {
+                    ctx.fillText(variant, 128, 128);
+                }
+                
+                const texture = new THREE.CanvasTexture(canvas);
+                return new THREE.MeshStandardMaterial({ map: texture });
+            });
+            
+            dice = new THREE.Mesh(geometry, materials);
+            scene.add(dice);
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 5, 5);
+            scene.add(directionalLight);
+            
+            // Gentle rotation when idle
+            function idleAnimate() {
+                if (!diceRolling) {
+                    dice.rotation.x += 0.005;
+                    dice.rotation.y += 0.005;
+                }
+                renderer.render(scene, camera);
+                requestAnimationFrame(idleAnimate);
+            }
+            idleAnimate();
+            
+            // Click to roll
+            container.addEventListener('click', rollDice);
+        }
+
+        function rollDice() {
+            if (diceRolling) return;
+            diceRolling = true;
+            
+            const instruction = document.querySelector('.dice-instruction');
+            instruction.textContent = 'Rolling...';
+            
+            // Random fast rotations
+            let startTime = null;
+            const duration = CONFIG.diceRollDuration;
+            
+            // Target: Codex Max is at index 4, which is on a specific face
+            // Face mapping: 0=right, 1=left, 2=top, 3=bottom, 4=front, 5=back
+            // We want face 4 (Codex Max) to be facing the camera
+            const targetRotationX = Math.PI * 0;
+            const targetRotationY = 0;
+            const targetRotationZ = 0;
+            
+            // Add some full rotations for effect
+            const totalRotationsX = 4 * Math.PI * 2 + targetRotationX;
+            const totalRotationsY = 3 * Math.PI * 2 + targetRotationY;
+            const totalRotationsZ = 2 * Math.PI * 2 + targetRotationZ;
+            
+            function easeOutCubic(t) {
+                return 1 - Math.pow(1 - t, 3);
+            }
+            
+            function animate(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const elapsed = timestamp - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Easing
+                const eased = easeOutCubic(progress);
+                
+                dice.rotation.x = totalRotationsX * eased;
+                dice.rotation.y = totalRotationsY * eased;
+                dice.rotation.z = totalRotationsZ * eased;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    diceRolling = false;
+                    selections.variant = CONFIG.targetVariant;
+                    instruction.textContent = CONFIG.targetVariant + '!';
+                    setTimeout(() => advanceStage(), 500);
+                }
+            }
+            
+            requestAnimationFrame(animate);
+        }
+
+        // ============================================
+        // STAGE 4: WII GOLF POWER BAR
+        // ============================================
+        let golfActive = false;
+        let powerPosition = 100; // Start at bottom (low)
+        let powerDirection = -1; // Moving up
+        let golfInterval = null;
+
+        function initGolf() {
+            const golfArea = document.getElementById('golf-area');
+            const indicator = document.getElementById('power-indicator');
+            
+            // Start the power bar moving
+            golfActive = true;
+            
+            function movePower() {
+                if (!golfActive) return;
+                
+                powerPosition += powerDirection * 2;
+                
+                if (powerPosition <= 0) {
+                    powerDirection = 1;
+                    powerPosition = 0;
+                } else if (powerPosition >= 100) {
+                    powerDirection = -1;
+                    powerPosition = 100;
+                }
+                
+                // Convert percentage to pixel position (350px is bar height minus indicator)
+                const pixelPos = (powerPosition / 100) * 342;
+                indicator.style.top = pixelPos + 'px';
+            }
+            
+            golfInterval = setInterval(movePower, CONFIG.golfSwingSpeed);
+            
+            golfArea.addEventListener('click', stopGolf);
+        }
+
+        function stopGolf() {
+            if (!golfActive) return;
+            golfActive = false;
+            clearInterval(golfInterval);
+            
+            // Determine which zone we landed in
+            // 0-15% = xhigh, 15-35% = high, 35-55% = medium, 55-100% = low
+            let effort;
+            if (powerPosition <= 15) {
+                effort = 'xhigh';
+            } else if (powerPosition <= 35) {
+                effort = 'high';
+            } else if (powerPosition <= 55) {
+                effort = 'medium';
+            } else {
+                effort = 'low';
+            }
+            
+            // For the demo, we want to land on xhigh
+            // Force it to the target zone
+            const indicator = document.getElementById('power-indicator');
+            indicator.style.top = '20px'; // xhigh position
+            selections.effort = CONFIG.targetEffort;
+            
+            setTimeout(() => advanceStage(), 1000);
+        }
+
+        // ============================================
+        // STAGE 5: EASY BUTTON & TOO SLOW
+        // ============================================
+        let countdownStarted = false;
+        let buttonClicked = false;
+
+        function initEasyButton() {
+            const button = document.getElementById('easy-button');
+            const countdownBar = document.getElementById('countdown-bar');
+            
+            // Start countdown immediately
+            countdownStarted = true;
+            countdownBar.style.transition = `width ${CONFIG.countdownDuration}ms linear`;
+            
+            setTimeout(() => {
+                countdownBar.style.width = '0%';
+            }, 50);
+            
+            // When countdown ends
+            setTimeout(() => {
+                if (!buttonClicked) {
+                    showTooSlow();
+                }
+            }, CONFIG.countdownDuration + 50);
+            
+            button.addEventListener('click', () => {
+                if (!countdownStarted || buttonClicked) return;
+                buttonClicked = true;
+                selections.speed = 'fast';
+                advanceStage();
+            });
+        }
+
+        function showTooSlow() {
+            const overlay = document.getElementById('too-slow-overlay');
+            overlay.classList.add('visible');
+            selections.speed = 'failed';
+            
+            // After showing "Too Slow", move to result after a delay
+            setTimeout(() => {
+                overlay.classList.remove('visible');
+                advanceStage();
+            }, 1500);
+        }
+
+        // ============================================
+        // STAGE MANAGEMENT
+        // ============================================
+        const stages = ['stage-slot', 'stage-earthquake', 'stage-dice', 'stage-golf', 'stage-easy', 'stage-result'];
+
+        function advanceStage() {
+            document.getElementById(stages[currentStage]).classList.remove('active');
+            currentStage++;
+            
+            if (currentStage < stages.length) {
+                document.getElementById(stages[currentStage]).classList.add('active');
+                
+                // Initialize stage-specific functionality
+                if (stages[currentStage] === 'stage-dice') {
+                    setTimeout(initDice, 100);
+                } else if (stages[currentStage] === 'stage-golf') {
+                    setTimeout(initGolf, 100);
+                } else if (stages[currentStage] === 'stage-easy') {
+                    setTimeout(initEasyButton, 100);
+                } else if (stages[currentStage] === 'stage-result') {
+                    showResult();
+                }
+            }
+        }
+
+        function showResult() {
+            const result = document.getElementById('result-model');
+            const effortText = selections.effort === 'xhigh' ? 'Extra High' : 
+                              selections.effort === 'high' ? 'High' :
+                              selections.effort === 'medium' ? 'Medium' : 'Low';
+            result.textContent = `${selections.provider}-${selections.version} ${selections.variant} ${effortText}`;
+        }
+
+        function restart() {
+            currentStage = 0;
+            selections = { provider: '', version: '', variant: '', effort: '', speed: '' };
+            buttonClicked = false;
+            countdownStarted = false;
+            
+            // Reset all stages
+            stages.forEach((stage, i) => {
+                const el = document.getElementById(stage);
+                if (i === 0) {
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                }
+            });
+            
+            // Reset slot machine (all 3 reels)
+            initSlotMachine();
+            
+            // Reset countdown bar
+            const countdownBar = document.getElementById('countdown-bar');
+            countdownBar.style.transition = 'none';
+            countdownBar.style.width = '100%';
+            
+            // Reset dice container
+            const diceContainer = document.getElementById('dice-container');
+            diceContainer.innerHTML = '';
+            diceRolling = false;
+            
+            // Reset selected version display
+            const versionDisplay = document.getElementById('selected-version');
+            versionDisplay.textContent = '';
+        }
+
+        // Initialize
+        initSlotMachine();
+    </script>
+</body>
+</html>
