@@ -2,6 +2,10 @@
 
 A satirical web app that simulates the overly complicated process of selecting an AI model through absurd mini-games.
 
+## Demo
+
+[![Watch the demo](https://img.shields.io/badge/Watch%20Demo-X%2FTwitter-black?style=for-the-badge&logo=x)](https://x.com/i/status/1996662045920710898)
+
 ## Features
 
 - **Slot Machine**: Pull the lever to randomly select a model variant (Codex, Turbo, Max, Ultra, etc.)
