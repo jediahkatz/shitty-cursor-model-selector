@@ -1,10 +1,13 @@
-# Model Selector 3000
+# Improved Model Selector for Cursor 
 
-A satirical web app that simulates the overly complicated process of selecting an AI model through absurd mini-games.
+We heard you loud and clear that it was getting confusing to pick between so many models, so we completely revamped the model picker in Cursor.
+
 
 ## Demo
 
-[![Watch the demo](https://img.shields.io/badge/Watch%20Demo-X%2FTwitter-black?style=for-the-badge&logo=x)](https://x.com/i/status/1996662045920710898)
+_Built with [Cursor](https://cursor.com/agents)._
+
+<video src="demo.mov" controls width="100%"></video>
 
 ## Features
 
@@ -23,10 +26,6 @@ python3 -m http.server 8080
 ```
 
 Then visit http://localhost:8080
-
-## Why?
-
-Because selecting AI models shouldn't be easy. Or sensible.
 
 ## License
 
